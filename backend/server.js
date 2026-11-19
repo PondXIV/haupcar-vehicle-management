@@ -2,7 +2,7 @@ require('dotenv').config()
 
 const cors = require('cors')
 const express = require('express')
-const { initializeDatabase, pool } = require('./src/db')
+const { initializeDatabase, prisma } = require('./src/db')
 const foldersRouter = require('./src/routes/folders')
 
 const app = express()
@@ -38,6 +38,6 @@ initializeDatabase()
   })
   .catch(async (err) => {
     console.error('Failed to initialize database:', err)
-    await pool.end()
+    await prisma.$disconnect()
     process.exitCode = 1
   })

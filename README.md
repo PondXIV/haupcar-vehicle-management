@@ -1,10 +1,10 @@
 # Haupcar Vehicle Management
 
-Folder management project with a REST API built using Express and PostgreSQL, and a frontend built with React and Vite.
+Folder management project with a REST API built using Express, Prisma, and PostgreSQL, and a frontend built with React and Vite.
 
 ## Project Structure
 
-- `backend/` — REST API and PostgreSQL connection
+- `backend/` — REST API and Prisma database schema
 - `frontend/` — React web app
 
 ## Prerequisites
@@ -14,7 +14,7 @@ Folder management project with a REST API built using Express and PostgreSQL, an
 
 ## Set Up and Run the Backend
 
-1. Create a PostgreSQL database named `haupcar_vehicle_management` (or choose another name and set it in `.env`).
+1. Ensure the PostgreSQL database configured by `DATABASE_URL` exists (default database: `postgres`; change it in `.env` if needed).
 2. Open a terminal in the `backend` directory and install the dependencies:
 
    ```bash
@@ -22,25 +22,23 @@ Folder management project with a REST API built using Express and PostgreSQL, an
    npm install
    ```
 
-3. Copy `.env.example` to `.env` and configure your PostgreSQL user and password:
+3. Copy `.env.example` to `.env` and set your PostgreSQL connection string:
 
    ```dotenv
    PORT=5000
    NODE_ENV=development
-   PGHOST=localhost
-   PGPORT=5432
-   PGDATABASE=haupcar_vehicle_management
-   PGUSER=postgres
-   PGPASSWORD=your_postgres_password
+   DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/postgres?schema=public"
    ```
 
-4. Start the API:
+4. Generate Prisma Client, apply migrations, and start the API:
 
    ```bash
+   npm run db:generate
+   npm run db:deploy
    npm run dev
    ```
 
-   Alternatively, use `npm start` to run the server normally. The `folders` table is created automatically when the server starts.
+   Alternatively, use `npm start` to run the server normally. Prisma Migrate manages the database schema.
 
 ## Set Up and Run the Frontend
 

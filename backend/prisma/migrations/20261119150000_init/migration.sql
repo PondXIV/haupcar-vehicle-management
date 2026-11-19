@@ -1,0 +1,19 @@
+CREATE SCHEMA IF NOT EXISTS "public";
+
+CREATE TABLE "folders" (
+    "id" BIGSERIAL NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "folders_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "auth_users" (
+    "username" VARCHAR(255) NOT NULL,
+    "password_hash" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "auth_users_pkey" PRIMARY KEY ("username")
+);

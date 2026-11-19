@@ -2,20 +2,47 @@
 
 ## Setup
 
-1. Copy `.env.example` to `.env` and set `PGPASSWORD` to the password for your PostgreSQL user.
-2. Create the database configured by `PGDATABASE` (default: `haupcar_vehicle_management`).
-3. Install dependencies with `npm install`.
-4. Start the API with `npm run dev` or `npm start`.
+1. Make sure the PostgreSQL database in `DATABASE_URL` exists.
+2. Set `DATABASE_URL` in `.env` to your PostgreSQL connection string. For example:
 
-The `folders` table is created automatically when the server starts.
+   ```dotenv
+   DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/postgres?schema=public"
+   ```
+
+3. Install dependencies and generate the Prisma Client:
+
+   ```bash
+   npm install
+   npm run db:generate
+   ```
+
+4. Apply migrations to the database:
+
+   ```bash
+   npm run db:deploy
+   ```
+
+5. Start the API with `npm run dev` or `npm start`.
+
+For local schema development, use `npm run db:migrate -- --name <migration_name>`.
+The server connects to the database on startup; Prisma Migrate manages the schema.
+Run `npm run db:seed` to insert the initial vehicle brands and the development auth user (`Somchai`). Its password (`1234`) is stored as a bcrypt hash. This development seeder refuses to run when `NODE_ENV=production`; replace the sample credentials before deploying the application.
+
+If `folders` and `auth_users` already exist from the previous SQL setup, do not apply the initial migration directly because it creates those tables. Verify that the existing schema matches `prisma/migrations/20261119150000_init/migration.sql`, then baseline it with:
+
+```bash
+npx prisma migrate resolve --applied 20261119150000_init
+```
 
 ## Project structure
 
 - `src/controllers/foldersController.js` — folder CRUD request handlers and validation
-- `src/models/foldersModel.js` — folder database queries
+- `src/models/foldersModel.js` — folder queries through Prisma Client
 - `src/services/foldersService.js` — folder operations between the controller and model
 - `src/routes/folders.js` — folder endpoint definitions
-- `src/db.js` — PostgreSQL connection pool and database initialization
+- `src/db.js` — Prisma Client connection
+- `prisma/schema.prisma` — Prisma models for folders, users, vehicle brands, and vehicles
+- `prisma/migrations/` — database schema migrations
 
 ## Folder endpoints
 
