@@ -12,4 +12,8 @@ async function deleteVehicle(id) {
   return vehiclesModel.remove(id)
 }
 
-module.exports = { createVehicle, deleteVehicle, listVehicles }
+async function updateVehicle(id, vehicleData) {
+  return vehiclesModel.update(id, vehicleData)
+}
+
+module.exports = { createVehicle, deleteVehicle, listVehicles, updateVehicle }

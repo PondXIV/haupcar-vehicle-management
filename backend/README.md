@@ -84,6 +84,7 @@ Vehicle endpoints:
 | --- | --- | --- |
 | `GET` | `/api/vehicles` | List vehicles; accepts the query filters below |
 | `POST` | `/api/vehicles` | Create a vehicle |
+| `PUT` | `/api/vehicles/:id` | Replace a vehicle’s details |
 | `DELETE` | `/api/vehicles/:id` | Delete a vehicle by ID |
 
 `GET /api/vehicles` returns the vehicle list in the standard `{ "Status": 200, "Data": [] }` format. `POST /api/vehicles` creates a vehicle with this JSON body:
@@ -99,6 +100,8 @@ Vehicle endpoints:
 ```
 
 `notes` is optional and may be `null`. `vehicleType` must be `Electric`, `Gasoline`, or `Hybrid`. Creation returns HTTP `201` with the created vehicle. An invalid request or brand ID returns HTTP `400`; a duplicate license plate returns HTTP `409`. Deletion uses `DELETE /api/vehicles/:id`, returns `{ "Status": 200, "Data": {} }` on success, `400` for an invalid ID, and `404` if no vehicle exists.
+
+`PUT /api/vehicles/:id` uses the same JSON body as creation and replaces the vehicle’s details. It returns HTTP `200` with the updated vehicle, `400` for invalid input or brand ID, `404` if the vehicle does not exist, and `409` if the license plate is already assigned to another vehicle.
 
 Optional query parameters for `GET /api/vehicles`:
 

@@ -782,18 +782,30 @@
   text-align: right;
 }
 
+.vehicle-edit-button,
 .vehicle-delete-button,
 .confirm-delete-vehicle-button {
   min-height: 28px;
   padding: 0 9px;
-  border: 1px solid #f0dfdc;
+  border: 1px solid #e3ebe7;
   border-radius: 5px;
   background: #fff;
-  color: #a25b52;
+  color: #5e756b;
   cursor: pointer;
   font: inherit;
   font-size: 9px;
   font-weight: 600;
+}
+
+.vehicle-edit-button:hover {
+  border-color: #b7d3c8;
+  background: #f5faf7;
+  color: #27796b;
+}
+
+.vehicle-delete-button {
+  border-color: #f0dfdc;
+  color: #a25b52;
 }
 
 .vehicle-delete-button:hover,
@@ -1180,6 +1192,7 @@
 .cancel-create-button:focus-visible,
 .modal-close-button:focus-visible,
 .vehicle-success-toast > button:focus-visible,
+.vehicle-edit-button:focus-visible,
 .vehicle-delete-button:focus-visible,
 .confirm-delete-vehicle-button:focus-visible {
   outline: 3px solid rgba(38, 140, 123, 0.35);

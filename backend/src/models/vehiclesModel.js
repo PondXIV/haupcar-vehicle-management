@@ -84,9 +84,37 @@ async function create(vehicleData) {
   return serializeVehicle(vehicle)
 }
 
+async function update(id, vehicleData) {
+  try {
+    const vehicle = await prisma.vehicle.update({
+      where: { id: BigInt(id) },
+      data: {
+        licensePlate: vehicleData.licensePlate,
+        brandId: BigInt(vehicleData.brandId),
+        model: vehicleData.model,
+        vehicleType: vehicleData.vehicleType,
+        notes: vehicleData.notes,
+      },
+      include: {
+        brand: {
+          select: { id: true, name: true },
+        },
+      },
+    })
+
+    return serializeVehicle(vehicle)
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return null
+    }
+
+    throw error
+  }
+}
+
 async function remove(id) {
   const result = await prisma.vehicle.deleteMany({ where: { id: BigInt(id) } })
   return result.count > 0
 }
 
-module.exports = { create, findAll, remove }
+module.exports = { create, findAll, remove, update }

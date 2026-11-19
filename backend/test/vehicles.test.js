@@ -15,6 +15,7 @@ const originalMethods = {
   create: vehiclesModel.create,
   findAll: vehiclesModel.findAll,
   remove: vehiclesModel.remove,
+  update: vehiclesModel.update,
 }
 const originalJwtSecret = process.env.JWT_SECRET
 const testJwtSecret = 'test-secret-with-at-least-32-bytes-long'
@@ -23,6 +24,10 @@ let receivedVehicle
 let createError
 let deleteResult
 let receivedDeletedId
+let receivedUpdatedId
+let receivedUpdatedVehicle
+let updateResult
+let updateError
 
 function createVehicleRecord(vehicleData) {
   const now = '2026-01-01T00:00:00.000Z'
@@ -76,6 +81,12 @@ before(async () => {
   vehiclesModel.remove = async (id) => {
     receivedDeletedId = id
     return deleteResult
+  }
+  vehiclesModel.update = async (id, vehicleData) => {
+    receivedUpdatedId = id
+    receivedUpdatedVehicle = vehicleData
+    if (updateError) throw updateError
+    return updateResult === undefined ? createVehicleRecord(vehicleData) : updateResult
   }
 
   await new Promise((resolve) => {
@@ -265,5 +276,119 @@ test('validates vehicle id and returns not found for missing vehicles', async ()
 
 test('requires authentication to delete vehicles', async () => {
   const response = await fetch(`${baseUrl}/2`, { method: 'DELETE' })
+  assert.equal(response.status, 401)
+})
+
+test('updates an authenticated vehicle and returns the updated record', async () => {
+  const vehicleData = {
+    licensePlate: 'UPDATED-1',
+    brandId: '2',
+    model: 'Camry',
+    vehicleType: 'Hybrid',
+    notes: 'Updated notes',
+  }
+  const response = await fetch(`${baseUrl}/2`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${signToken()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      licensePlate: ' UPDATED-1 ',
+      brandId: 2,
+      model: ' Camry ',
+      vehicleType: 'Hybrid',
+      notes: 'Updated notes',
+    }),
+  })
+
+  assert.equal(response.status, 200)
+  assert.equal(receivedUpdatedId, '2')
+  assert.deepEqual(receivedUpdatedVehicle, vehicleData)
+  const result = await response.json()
+  assert.equal(result.Status, 200)
+  assert.equal(result.Data.license_plate, 'UPDATED-1')
+  assert.equal(result.Data.brand_id, '2')
+  assert.equal(result.Data.model, 'Camry')
+})
+
+test('validates vehicle update id and body', async () => {
+  const headers = {
+    Authorization: `Bearer ${signToken()}`,
+    'Content-Type': 'application/json',
+  }
+  const validBody = {
+    licensePlate: 'CAR-1',
+    brandId: 1,
+    model: 'Corolla',
+    vehicleType: 'Gasoline',
+  }
+
+  const invalidIdResponse = await fetch(`${baseUrl}/bad-id`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(validBody),
+  })
+  assert.equal(invalidIdResponse.status, 400)
+
+  const invalidBodyResponse = await fetch(`${baseUrl}/2`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ ...validBody, vehicleType: 'Diesel' }),
+  })
+  assert.equal(invalidBodyResponse.status, 400)
+})
+
+test('handles missing vehicles and update conflicts', async () => {
+  const headers = {
+    Authorization: `Bearer ${signToken()}`,
+    'Content-Type': 'application/json',
+  }
+  const body = JSON.stringify({
+    licensePlate: 'CAR-1',
+    brandId: 1,
+    model: 'Corolla',
+    vehicleType: 'Gasoline',
+  })
+
+  updateResult = null
+  const missingResponse = await fetch(`${baseUrl}/999`, {
+    method: 'PUT',
+    headers,
+    body,
+  })
+  assert.equal(missingResponse.status, 404)
+
+  updateError = { code: 'P2002' }
+  const duplicatePlateResponse = await fetch(`${baseUrl}/2`, {
+    method: 'PUT',
+    headers,
+    body,
+  })
+  assert.equal(duplicatePlateResponse.status, 409)
+
+  updateError = { code: 'P2003' }
+  const missingBrandResponse = await fetch(`${baseUrl}/2`, {
+    method: 'PUT',
+    headers,
+    body,
+  })
+  assert.equal(missingBrandResponse.status, 400)
+
+  updateResult = undefined
+  updateError = null
+})
+
+test('requires authentication to update vehicles', async () => {
+  const response = await fetch(`${baseUrl}/2`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      licensePlate: 'CAR-1',
+      brandId: 1,
+      model: 'Corolla',
+      vehicleType: 'Gasoline',
+    }),
+  })
   assert.equal(response.status, 401)
 })
