@@ -28,6 +28,7 @@ Folder management project with a REST API built using Express, Prisma, and Postg
    PORT=5000
    NODE_ENV=development
    DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/postgres?schema=public"
+   JWT_SECRET=replace_with_a_random_secret_at_least_32_bytes
    ```
 
 4. Generate Prisma Client, apply migrations, and start the API:

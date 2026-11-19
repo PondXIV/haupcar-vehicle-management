@@ -3,10 +3,11 @@
 ## Setup
 
 1. Make sure the PostgreSQL database in `DATABASE_URL` exists.
-2. Set `DATABASE_URL` in `.env` to your PostgreSQL connection string. For example:
+2. Set `DATABASE_URL` and a private, random `JWT_SECRET` of at least 32 bytes in `.env`. For example:
 
    ```dotenv
    DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/postgres?schema=public"
+   JWT_SECRET=replace_with_a_random_secret_at_least_32_bytes
    ```
 
 3. Install dependencies and generate the Prisma Client:
@@ -47,6 +48,7 @@ npx prisma migrate resolve --applied 20261119150000_init
 ## Folder endpoints
 
 All endpoints are prefixed with `/api/folders`.
+JSON responses use the `{ "Status": 200, "Data": {} }` envelope. `Status` matches the HTTP status code; `Data` contains the response payload (an object or array). Successful deletes return HTTP `200` with an empty `Data` object.
 
 | Method | Path | Description |
 | --- | --- | --- |
@@ -57,3 +59,7 @@ All endpoints are prefixed with `/api/folders`.
 | `DELETE` | `/api/folders/:id` | Delete a folder |
 
 Folder responses include `id`, `name`, `created_at`, and `updated_at`.
+
+## Login
+
+`POST /api/auth/login` accepts `{ "username": "Somchai", "password": "1234" }` and returns the signed token in the standard `{ "Status": 200, "Data": { "token": "...", "tokenType": "Bearer", "expiresIn": 3600, "user": { "id": "...", "username": "..." } } }` response. Tokens expire after one hour. Login attempts are limited to 10 per IP per 15 minutes. Keep `JWT_SECRET` private and use a strong, unique password outside local development.
