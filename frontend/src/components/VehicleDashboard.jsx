@@ -14,6 +14,7 @@ function VehicleDashboard({ session, onSignOut }) {
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [editingVehicle, setEditingVehicle] = useState(null)
   const [brands, setBrands] = useState([])
   const [isBrandsLoading, setIsBrandsLoading] = useState(false)
   const [brandsError, setBrandsError] = useState('')
@@ -132,9 +133,36 @@ function VehicleDashboard({ session, onSignOut }) {
     return () => controller.abort()
   }, [isCreateOpen, onSignOut, session.token])
 
+  function openCreateForm() {
+    setEditingVehicle(null)
+    setCreateError('')
+    setNewVehicle({
+      licensePlate: '',
+      brandId: '',
+      model: '',
+      vehicleType: 'Gasoline',
+      notes: '',
+    })
+    setIsCreateOpen(true)
+  }
+
+  function openEditForm(vehicle) {
+    setEditingVehicle(vehicle)
+    setCreateError('')
+    setNewVehicle({
+      licensePlate: vehicle.license_plate,
+      brandId: vehicle.brand_id,
+      model: vehicle.model,
+      vehicleType: vehicle.vehicle_type,
+      notes: vehicle.notes || '',
+    })
+    setIsCreateOpen(true)
+  }
+
   function closeCreateForm() {
     if (isCreating) return
     setIsCreateOpen(false)
+    setEditingVehicle(null)
     setCreateError('')
   }
 
@@ -144,8 +172,10 @@ function VehicleDashboard({ session, onSignOut }) {
     setIsCreating(true)
 
     try {
-      const response = await fetch('/api/vehicles', {
-        method: 'POST',
+      const response = await fetch(
+        editingVehicle ? `/api/vehicles/${editingVehicle.id}` : '/api/vehicles',
+        {
+        method: editingVehicle ? 'PUT' : 'POST',
         headers: {
           Authorization: 'Bearer ' + session.token,
           'Content-Type': 'application/json',
@@ -163,12 +193,15 @@ function VehicleDashboard({ session, onSignOut }) {
         return
       }
 
-      if (!response.ok || result.Status !== 201 || !result.Data?.id) {
-        setCreateError(result.Data?.error || 'Unable to create vehicle. Please try again.')
+      const successStatus = editingVehicle ? 200 : 201
+      if (!response.ok || result.Status !== successStatus || !result.Data?.id) {
+        setCreateError(result.Data?.error || `Unable to ${editingVehicle ? 'update' : 'create'} vehicle. Please try again.`)
         return
       }
 
+      const wasEditing = Boolean(editingVehicle)
       setIsCreateOpen(false)
+      setEditingVehicle(null)
       setNewVehicle({
         licensePlate: '',
         brandId: newVehicle.brandId,
@@ -179,7 +212,7 @@ function VehicleDashboard({ session, onSignOut }) {
       setSearch('')
       setVehicleType('')
       setRefreshKey((current) => current + 1)
-      setVehicleSuccessMessage('Vehicle added successfully.')
+      setVehicleSuccessMessage(wasEditing ? 'Vehicle updated successfully.' : 'Vehicle added successfully.')
     } catch {
       setCreateError('Cannot reach the server. Check your connection and try again.')
     } finally {
@@ -324,10 +357,7 @@ function VehicleDashboard({ session, onSignOut }) {
               </div>
               <button
                 className="create-vehicle-button"
-                onClick={() => {
-                  setCreateError('')
-                  setIsCreateOpen(true)
-                }}
+                onClick={openCreateForm}
                 type="button"
               >
                 <span aria-hidden="true">+</span> Add vehicle
@@ -452,6 +482,14 @@ function VehicleDashboard({ session, onSignOut }) {
                           </td>
                           <td className="vehicle-actions-cell">
                             <button
+                              aria-label={`Edit ${vehicle.brand?.name || ''} ${vehicle.model}, plate ${vehicle.license_plate}`}
+                              className="vehicle-edit-button"
+                              onClick={() => openEditForm(vehicle)}
+                              type="button"
+                            >
+                              Edit
+                            </button>
+                            <button
                               aria-label={`Delete ${vehicle.brand?.name || ''} ${vehicle.model}, plate ${vehicle.license_plate}`}
                               className="vehicle-delete-button"
                               onClick={() => {
@@ -533,8 +571,12 @@ function VehicleDashboard({ session, onSignOut }) {
             <div className="create-vehicle-heading">
               <div>
                 <p className="fleet-eyebrow"><span /> FLEET MANAGEMENT</p>
-                <h2 id="create-vehicle-title">Add a vehicle</h2>
-                <p>Enter the details to register a vehicle in your fleet.</p>
+                <h2 id="create-vehicle-title">{editingVehicle ? 'Edit vehicle' : 'Add a vehicle'}</h2>
+                <p>
+                  {editingVehicle
+                    ? 'Update the vehicle details in your fleet.'
+                    : 'Enter the details to register a vehicle in your fleet.'}
+                </p>
               </div>
               <button
                 aria-label="Close form"
@@ -643,7 +685,7 @@ function VehicleDashboard({ session, onSignOut }) {
                   disabled={isCreating || isBrandsLoading || brands.length === 0}
                   type="submit"
                 >
-                  {isCreating ? 'Saving...' : 'Save vehicle'}
+                  {isCreating ? 'Saving...' : editingVehicle ? 'Save changes' : 'Save vehicle'}
                 </button>
               </div>
             </form>

@@ -155,4 +155,38 @@ async function deleteVehicle(req, res) {
   return res.status(200).json(new APIResponse(200))
 }
 
-module.exports = { createVehicle, deleteVehicle, listVehicles }
+async function updateVehicle(req, res) {
+  if (!/^[1-9]\d*$/.test(req.params.id)) {
+    return res.status(400).json(new APIResponse(400, { error: 'Invalid vehicle id.' }))
+  }
+
+  const { vehicleData, error } = validateVehicle(req.body)
+  if (error) {
+    return res.status(400).json(new APIResponse(400, { error }))
+  }
+
+  try {
+    const vehicle = await vehiclesService.updateVehicle(req.params.id, vehicleData)
+    if (!vehicle) {
+      return res.status(404).json(new APIResponse(404, { error: 'Vehicle not found.' }))
+    }
+
+    return res.status(200).json(new APIResponse(200, vehicle))
+  } catch (updateError) {
+    if (updateError.code === 'P2002') {
+      return res.status(409).json(
+        new APIResponse(409, { error: 'License plate already exists.' })
+      )
+    }
+
+    if (updateError.code === 'P2003') {
+      return res.status(400).json(
+        new APIResponse(400, { error: 'brandId does not reference an existing vehicle brand.' })
+      )
+    }
+
+    throw updateError
+  }
+}
+
+module.exports = { createVehicle, deleteVehicle, listVehicles, updateVehicle }
