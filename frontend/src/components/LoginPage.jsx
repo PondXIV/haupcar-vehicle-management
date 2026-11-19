@@ -1,38 +1,15 @@
 import { useState } from 'react'
-import './App.css'
+import BrandMark from './BrandMark'
+import './LoginPage.css'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
-function BrandMark() {
-  return (
-    <div className="brand-mark" aria-hidden="true">
-      <svg viewBox="0 0 40 40" fill="none">
-        <path
-          d="M7 25.5 10.1 16a4 4 0 0 1 3.8-2.8h12.2a4 4 0 0 1 3.8 2.8l3.1 9.5"
-          stroke="currentColor"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M5.5 25.5h29v5a2 2 0 0 1-2 2H7.5a2 2 0 0 1-2-2v-5ZM12 25.5l2-5h12l2 5M11 29h.01M29 29h.01"
-          stroke="currentColor"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </div>
-  )
-}
-
-function App() {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+export default function LoginPage({ initialError = '', onLogin }) {
+  const [username, setUsername] = useState(import.meta.env.DEV ? 'Somchai' : '')
+  const [password, setPassword] = useState(import.meta.env.DEV ? '1234' : '')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [session, setSession] = useState(null)
+  const [error, setError] = useState(initialError)
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -52,11 +29,15 @@ function App() {
         return
       }
 
-      setSession({
+      const sessionSaved = onLogin({
         username: result.Data.user.username,
         token: result.Data.token,
         expiresIn: result.Data.expiresIn,
       })
+      if (!sessionSaved) {
+        setError('Unable to save your session. Check your browser settings and try again.')
+        return
+      }
       setPassword('')
     } catch {
       setError('Cannot reach the server. Check your connection and try again.')
@@ -64,13 +45,6 @@ function App() {
       setIsLoading(false)
     }
   }
-
-  function handleSignOut() {
-    setSession(null)
-    setPassword('')
-    setError('')
-  }
-
   return (
     <main className="login-page">
       <section className="login-panel" aria-label="Haupcar sign in">
@@ -80,28 +54,7 @@ function App() {
             <span>HAUP<span className="brand-light">CAR</span></span>
           </a>
 
-          {session ? (
-            <div className="success-state" role="status">
-              <div className="success-icon" aria-hidden="true">✓</div>
-              <p className="eyebrow">AUTHENTICATED</p>
-              <h1>Welcome back.</h1>
-              <p className="form-description">
-                You&apos;re signed in as <strong>{session.username}</strong>.
-              </p>
-              <div className="session-card">
-                <span className="session-indicator" />
-                <span>Secure session active</span>
-                <span className="session-time">
-                  {Math.floor(session.expiresIn / 60)} min
-                </span>
-              </div>
-              <button className="submit-button sign-out-button" onClick={handleSignOut}>
-                Sign out
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="heading-block">
+          <div className="heading-block">
                 <p className="eyebrow">VEHICLE MANAGEMENT</p>
                 <h1>Welcome back.</h1>
                 <p className="form-description">
@@ -184,8 +137,6 @@ function App() {
                 </svg>
                 Your connection is protected and encrypted
               </p>
-            </>
-          )}
 
           <footer className="login-footer">
             <span>© {CURRENT_YEAR} Haupcar</span>
@@ -253,5 +204,3 @@ function App() {
     </main>
   )
 }
-
-export default App
