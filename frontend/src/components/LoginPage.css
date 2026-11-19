@@ -1,7 +1,3 @@
-#root {
-  min-height: 100vh;
-}
-
 .login-page {
   --ink: #132d2b;
   --muted: #788985;
@@ -573,16 +569,5 @@
 
   .vehicle-art {
     min-height: 185px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
   }
 }
