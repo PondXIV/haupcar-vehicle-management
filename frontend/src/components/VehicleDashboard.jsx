@@ -1,17 +1,41 @@
 import { useEffect, useState } from 'react'
 import BrandMark from './BrandMark'
+import VehicleBrandsPage from './VehicleBrandsPage'
 import './VehicleDashboard.css'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
 function VehicleDashboard({ session, onSignOut }) {
+  const [activePage, setActivePage] = useState('vehicles')
   const [vehicles, setVehicles] = useState([])
   const [search, setSearch] = useState('')
   const [vehicleType, setVehicleType] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [brands, setBrands] = useState([])
+  const [isBrandsLoading, setIsBrandsLoading] = useState(false)
+  const [brandsError, setBrandsError] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
+  const [createError, setCreateError] = useState('')
+  const [vehicleSuccessMessage, setVehicleSuccessMessage] = useState('')
+  const [newVehicle, setNewVehicle] = useState({
+    licensePlate: '',
+    brandId: '',
+    model: '',
+    vehicleType: 'Gasoline',
+    notes: '',
+  })
   const [page, setPage] = useState(1)
   const pageSize = 8
+
+  useEffect(() => {
+    if (!vehicleSuccessMessage) return undefined
+
+    const timer = window.setTimeout(() => setVehicleSuccessMessage(''), 4000)
+    return () => window.clearTimeout(timer)
+  }, [vehicleSuccessMessage])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -58,7 +82,107 @@ function VehicleDashboard({ session, onSignOut }) {
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [onSignOut, search, session.token, vehicleType])
+  }, [onSignOut, refreshKey, search, session.token, vehicleType])
+
+  useEffect(() => {
+    if (!isCreateOpen) return undefined
+
+    const controller = new AbortController()
+    async function loadBrands() {
+      setIsBrandsLoading(true)
+      setBrandsError('')
+
+      try {
+        const response = await fetch('/api/vehicle-brands', {
+          headers: { Authorization: 'Bearer ' + session.token },
+          signal: controller.signal,
+        })
+        const result = await response.json()
+
+        if (response.status === 401) {
+          onSignOut('Your session has expired. Please sign in again.')
+          return
+        }
+
+        if (!response.ok || result.Status !== 200 || !Array.isArray(result.Data)) {
+          setBrandsError(result.Data?.error || 'Unable to load vehicle brands.')
+          return
+        }
+
+        setBrands(result.Data)
+        setNewVehicle((current) => ({
+          ...current,
+          brandId: current.brandId || result.Data[0]?.id || '',
+        }))
+      } catch (requestError) {
+        if (requestError.name !== 'AbortError') {
+          setBrandsError('Cannot reach the server. Check your connection and try again.')
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsBrandsLoading(false)
+        }
+      }
+    }
+
+    loadBrands()
+    return () => controller.abort()
+  }, [isCreateOpen, onSignOut, session.token])
+
+  function closeCreateForm() {
+    if (isCreating) return
+    setIsCreateOpen(false)
+    setCreateError('')
+  }
+
+  async function handleCreateVehicle(event) {
+    event.preventDefault()
+    setCreateError('')
+    setIsCreating(true)
+
+    try {
+      const response = await fetch('/api/vehicles', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + session.token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...newVehicle,
+          brandId: newVehicle.brandId,
+          notes: newVehicle.notes.trim() || null,
+        }),
+      })
+      const result = await response.json()
+
+      if (response.status === 401) {
+        onSignOut('Your session has expired. Please sign in again.')
+        return
+      }
+
+      if (!response.ok || result.Status !== 201 || !result.Data?.id) {
+        setCreateError(result.Data?.error || 'Unable to create vehicle. Please try again.')
+        return
+      }
+
+      setIsCreateOpen(false)
+      setNewVehicle({
+        licensePlate: '',
+        brandId: newVehicle.brandId,
+        model: '',
+        vehicleType: 'Gasoline',
+        notes: '',
+      })
+      setSearch('')
+      setVehicleType('')
+      setRefreshKey((current) => current + 1)
+      setVehicleSuccessMessage('Vehicle added successfully.')
+    } catch {
+      setCreateError('Cannot reach the server. Check your connection and try again.')
+    } finally {
+      setIsCreating(false)
+    }
+  }
 
   const totalPages = Math.max(1, Math.ceil(vehicles.length / pageSize))
   const pageVehicles = vehicles.slice((page - 1) * pageSize, page * pageSize)
@@ -76,13 +200,29 @@ function VehicleDashboard({ session, onSignOut }) {
 
         <p className="sidebar-label">WORKSPACE</p>
         <nav className="fleet-nav" aria-label="Main navigation">
-          <a className="fleet-nav-link active" href="#vehicles" aria-current="page">
+          <button
+            aria-current={activePage === 'vehicles' ? 'page' : undefined}
+            className={`fleet-nav-link ${activePage === 'vehicles' ? 'active' : ''}`}
+            onClick={() => setActivePage('vehicles')}
+            type="button"
+          >
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M3 13h18l-1.6-5a2 2 0 0 0-1.9-1.4H6.5A2 2 0 0 0 4.6 8L3 13Zm0 0v5h18v-5M6 18v2m12-2v2M6.5 15.5h.01m11-.01h.01" />
             </svg>
             Vehicles
             <span className="nav-count">{vehicleCount}</span>
-          </a>
+          </button>
+          <button
+            aria-current={activePage === 'brands' ? 'page' : undefined}
+            className={`fleet-nav-link ${activePage === 'brands' ? 'active' : ''}`}
+            onClick={() => setActivePage('brands')}
+            type="button"
+          >
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 5.5h16M4 12h16M4 18.5h16M7 5.5h.01M7 12h.01M7 18.5h.01" />
+            </svg>
+            Brands
+          </button>
         </nav>
 
         <div className="sidebar-spacer" />
@@ -98,7 +238,9 @@ function VehicleDashboard({ session, onSignOut }) {
 
       <section className="fleet-main" id="vehicles">
         <header className="fleet-topbar">
-          <div className="breadcrumb"><span>Workspace</span><b>/</b> Vehicles</div>
+          <div className="breadcrumb">
+            <span>Workspace</span><b>/</b>{activePage === 'vehicles' ? 'Vehicles' : 'Brands'}
+          </div>
           <div className="topbar-user">
             <span className="topbar-status"><i /> All systems operational</span>
             <span className="topbar-divider" />
@@ -115,16 +257,42 @@ function VehicleDashboard({ session, onSignOut }) {
           </div>
         </header>
 
+        {activePage === 'vehicles' ? (
         <div className="fleet-content">
+          {vehicleSuccessMessage && (
+            <div className="vehicle-success-toast" role="status" aria-live="polite">
+              <span className="vehicle-success-icon" aria-hidden="true">✓</span>
+              <span>{vehicleSuccessMessage}</span>
+              <button
+                aria-label="Dismiss notification"
+                onClick={() => setVehicleSuccessMessage('')}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+          )}
           <div className="fleet-heading-row">
             <div>
               <p className="fleet-eyebrow"><span /> FLEET OVERVIEW</p>
               <h1>Vehicles</h1>
               <p className="fleet-subtitle">A clear view of every vehicle in your fleet.</p>
             </div>
-            <div className="updated-label">
-              <span className="updated-dot" />
-              Live fleet data
+            <div className="fleet-heading-actions">
+              <div className="updated-label">
+                <span className="updated-dot" />
+                Live fleet data
+              </div>
+              <button
+                className="create-vehicle-button"
+                onClick={() => {
+                  setCreateError('')
+                  setIsCreateOpen(true)
+                }}
+                type="button"
+              >
+                <span aria-hidden="true">+</span> Add vehicle
+              </button>
             </div>
           </div>
 
@@ -290,7 +458,144 @@ function VehicleDashboard({ session, onSignOut }) {
             <span><i /> System operational</span>
           </footer>
         </div>
+        ) : (
+          <VehicleBrandsPage token={session.token} onSignOut={onSignOut} />
+        )}
       </section>
+
+      {isCreateOpen && (
+        <div
+          className="create-vehicle-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeCreateForm()
+          }}
+        >
+          <section
+            aria-labelledby="create-vehicle-title"
+            aria-modal="true"
+            className="create-vehicle-dialog"
+            role="dialog"
+          >
+            <div className="create-vehicle-heading">
+              <div>
+                <p className="fleet-eyebrow"><span /> FLEET MANAGEMENT</p>
+                <h2 id="create-vehicle-title">Add a vehicle</h2>
+                <p>Enter the details to register a vehicle in your fleet.</p>
+              </div>
+              <button
+                aria-label="Close form"
+                className="modal-close-button"
+                disabled={isCreating}
+                onClick={closeCreateForm}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+
+            <form className="create-vehicle-form" onSubmit={handleCreateVehicle}>
+              <label>
+                License plate
+                <input
+                  autoComplete="off"
+                  maxLength={20}
+                  onChange={(event) => setNewVehicle((current) => ({
+                    ...current,
+                    licensePlate: event.target.value,
+                  }))}
+                  placeholder="e.g. NEW-123"
+                  required
+                  value={newVehicle.licensePlate}
+                />
+              </label>
+              <label>
+                Brand
+                <select
+                  disabled={isBrandsLoading || brands.length === 0}
+                  onChange={(event) => setNewVehicle((current) => ({
+                    ...current,
+                    brandId: event.target.value,
+                  }))}
+                  required
+                  value={newVehicle.brandId}
+                >
+                  <option value="">
+                    {isBrandsLoading ? 'Loading brands...' : 'Select a brand'}
+                  </option>
+                  {brands.map((brand) => (
+                    <option key={brand.id} value={brand.id}>{brand.name}</option>
+                  ))}
+                </select>
+                {brandsError && <span className="form-field-error">{brandsError}</span>}
+                {!isBrandsLoading && !brandsError && brands.length === 0 && (
+                  <span className="form-field-error">Create a vehicle brand before adding vehicles.</span>
+                )}
+              </label>
+              <label>
+                Model
+                <input
+                  maxLength={100}
+                  onChange={(event) => setNewVehicle((current) => ({
+                    ...current,
+                    model: event.target.value,
+                  }))}
+                  placeholder="e.g. Corolla"
+                  required
+                  value={newVehicle.model}
+                />
+              </label>
+              <label>
+                Vehicle type
+                <select
+                  onChange={(event) => setNewVehicle((current) => ({
+                    ...current,
+                    vehicleType: event.target.value,
+                  }))}
+                  value={newVehicle.vehicleType}
+                >
+                  <option value="Gasoline">Gasoline</option>
+                  <option value="Electric">Electric</option>
+                  <option value="Hybrid">Hybrid</option>
+                </select>
+              </label>
+              <label className="form-notes-field">
+                Notes <span>(optional)</span>
+                <textarea
+                  onChange={(event) => setNewVehicle((current) => ({
+                    ...current,
+                    notes: event.target.value,
+                  }))}
+                  placeholder="Add any useful details..."
+                  rows={3}
+                  value={newVehicle.notes}
+                />
+              </label>
+
+              {createError && (
+                <p className="create-form-error" role="alert">{createError}</p>
+              )}
+
+              <div className="create-vehicle-actions">
+                <button
+                  className="cancel-create-button"
+                  disabled={isCreating}
+                  onClick={closeCreateForm}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  className="submit-create-button"
+                  disabled={isCreating || isBrandsLoading || brands.length === 0}
+                  type="submit"
+                >
+                  {isCreating ? 'Saving...' : 'Save vehicle'}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </main>
   )
 }

@@ -66,7 +66,33 @@ Folder responses include `id`, `name`, `created_at`, and `updated_at`.
 
 ## Vehicle endpoints
 
-`GET /api/vehicles` returns the vehicle list in the standard `{ "Status": 200, "Data": [] }` format. Optional query parameters:
+Vehicle brand endpoints require the login token in the `Authorization: Bearer <token>` header:
+
+| Method | Path | Behavior |
+| --- | --- | --- |
+| `GET` | `/api/vehicle-brands` | List brands ordered by name |
+| `GET` | `/api/vehicle-brands/:id` | Get a brand by ID |
+| `POST` | `/api/vehicle-brands` | Create a brand with `{ "name": "Toyota" }` |
+| `PUT` | `/api/vehicle-brands/:id` | Update a brand name with `{ "name": "Toyota" }` |
+| `DELETE` | `/api/vehicle-brands/:id` | Delete a brand if no vehicles use it |
+
+Brand responses include `id`, `name`, `created_at`, and `updated_at` in the standard `{ "Status": 200, "Data": {} }` format. Names must be unique and no longer than 100 characters. Invalid input returns HTTP `400`, duplicate names return HTTP `409`, missing brands return HTTP `404`, and brands referenced by vehicles cannot be deleted (HTTP `409`).
+
+`GET /api/vehicles` returns the vehicle list in the standard `{ "Status": 200, "Data": [] }` format. `POST /api/vehicles` creates a vehicle with this JSON body:
+
+```json
+{
+  "licensePlate": "NEW-123",
+  "brandId": 1,
+  "model": "Corolla",
+  "vehicleType": "Gasoline",
+  "notes": "Company vehicle"
+}
+```
+
+`notes` is optional and may be `null`. `vehicleType` must be `Electric`, `Gasoline`, or `Hybrid`. Creation returns HTTP `201` with the created vehicle. An invalid request or brand ID returns HTTP `400`; a duplicate license plate returns HTTP `409`.
+
+Optional query parameters for `GET /api/vehicles`:
 
 | Parameter | Behavior |
 | --- | --- |
@@ -78,7 +104,7 @@ Folder responses include `id`, `name`, `created_at`, and `updated_at`.
 
 Filters can be combined. For example, `/api/vehicles?search=toy&vehicleType=Hybrid`. Unknown or invalid parameters return HTTP `400`.
 
-This endpoint requires the login token in the `Authorization` header:
+Both vehicle endpoints require the login token in the `Authorization` header:
 
 ```http
 Authorization: Bearer <JWT>

@@ -1,5 +1,22 @@
 const { prisma } = require('../db')
 
+function serializeVehicle(vehicle) {
+  return {
+    id: vehicle.id.toString(),
+    license_plate: vehicle.licensePlate,
+    brand_id: vehicle.brandId.toString(),
+    brand: {
+      id: vehicle.brand.id.toString(),
+      name: vehicle.brand.name,
+    },
+    model: vehicle.model,
+    vehicle_type: vehicle.vehicleType,
+    notes: vehicle.notes,
+    created_at: vehicle.createdAt,
+    updated_at: vehicle.updatedAt,
+  }
+}
+
 async function findAll(filters = {}) {
   const conditions = []
 
@@ -45,20 +62,26 @@ async function findAll(filters = {}) {
     },
   })
 
-  return vehicles.map((vehicle) => ({
-    id: vehicle.id.toString(),
-    license_plate: vehicle.licensePlate,
-    brand_id: vehicle.brandId.toString(),
-    brand: {
-      id: vehicle.brand.id.toString(),
-      name: vehicle.brand.name,
-    },
-    model: vehicle.model,
-    vehicle_type: vehicle.vehicleType,
-    notes: vehicle.notes,
-    created_at: vehicle.createdAt,
-    updated_at: vehicle.updatedAt,
-  }))
+  return vehicles.map(serializeVehicle)
 }
 
-module.exports = { findAll }
+async function create(vehicleData) {
+  const vehicle = await prisma.vehicle.create({
+    data: {
+      licensePlate: vehicleData.licensePlate,
+      brandId: BigInt(vehicleData.brandId),
+      model: vehicleData.model,
+      vehicleType: vehicleData.vehicleType,
+      notes: vehicleData.notes,
+    },
+    include: {
+      brand: {
+        select: { id: true, name: true },
+      },
+    },
+  })
+
+  return serializeVehicle(vehicle)
+}
+
+module.exports = { create, findAll }
