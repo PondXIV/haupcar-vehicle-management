@@ -20,6 +20,9 @@ function VehicleDashboard({ session, onSignOut }) {
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState('')
   const [vehicleSuccessMessage, setVehicleSuccessMessage] = useState('')
+  const [vehicleToDelete, setVehicleToDelete] = useState(null)
+  const [deleteVehicleError, setDeleteVehicleError] = useState('')
+  const [isDeletingVehicle, setIsDeletingVehicle] = useState(false)
   const [newVehicle, setNewVehicle] = useState({
     licensePlate: '',
     brandId: '',
@@ -181,6 +184,42 @@ function VehicleDashboard({ session, onSignOut }) {
       setCreateError('Cannot reach the server. Check your connection and try again.')
     } finally {
       setIsCreating(false)
+    }
+  }
+
+  async function handleDeleteVehicle() {
+    if (!vehicleToDelete) return
+
+    setDeleteVehicleError('')
+    setIsDeletingVehicle(true)
+
+    try {
+      const response = await fetch(`/api/vehicles/${vehicleToDelete.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer ' + session.token },
+      })
+      const result = await response.json()
+
+      if (response.status === 401) {
+        onSignOut('Your session has expired. Please sign in again.')
+        return
+      }
+
+      if (!response.ok || result.Status !== 200) {
+        setDeleteVehicleError(result.Data?.error || 'Unable to delete vehicle. Please try again.')
+        return
+      }
+
+      const remainingVehicles = vehicles.filter((vehicle) => vehicle.id !== vehicleToDelete.id)
+      const remainingPages = Math.max(1, Math.ceil(remainingVehicles.length / pageSize))
+      setVehicles(remainingVehicles)
+      setPage((currentPage) => Math.min(currentPage, remainingPages))
+      setVehicleToDelete(null)
+      setVehicleSuccessMessage('Vehicle deleted successfully.')
+    } catch {
+      setDeleteVehicleError('Cannot reach the server. Check your connection and try again.')
+    } finally {
+      setIsDeletingVehicle(false)
     }
   }
 
@@ -371,6 +410,7 @@ function VehicleDashboard({ session, onSignOut }) {
                       <th scope="col">TYPE</th>
                       <th scope="col">NOTES</th>
                       <th scope="col">LAST UPDATED</th>
+                      <th scope="col"><span className="sr-only">Actions</span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -380,6 +420,7 @@ function VehicleDashboard({ session, onSignOut }) {
                           <td><span className="skeleton vehicle-skeleton" /></td>
                           <td><span className="skeleton text-skeleton" /></td>
                           <td><span className="skeleton badge-skeleton" /></td>
+                          <td><span className="skeleton text-skeleton" /></td>
                           <td><span className="skeleton text-skeleton" /></td>
                           <td><span className="skeleton text-skeleton" /></td>
                         </tr>
@@ -409,11 +450,24 @@ function VehicleDashboard({ session, onSignOut }) {
                               {new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(vehicle.updated_at))}
                             </span>
                           </td>
+                          <td className="vehicle-actions-cell">
+                            <button
+                              aria-label={`Delete ${vehicle.brand?.name || ''} ${vehicle.model}, plate ${vehicle.license_plate}`}
+                              className="vehicle-delete-button"
+                              onClick={() => {
+                                setDeleteVehicleError('')
+                                setVehicleToDelete(vehicle)
+                              }}
+                              type="button"
+                            >
+                              Delete
+                            </button>
+                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td className="empty-cell" colSpan="5">
+                        <td className="empty-cell" colSpan="6">
                           <div className="empty-state">
                             <div className="empty-icon" aria-hidden="true">⌕</div>
                             <strong>No vehicles found</strong>
@@ -593,6 +647,74 @@ function VehicleDashboard({ session, onSignOut }) {
                 </button>
               </div>
             </form>
+          </section>
+        </div>
+      )}
+
+      {vehicleToDelete && (
+        <div
+          className="create-vehicle-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isDeletingVehicle) {
+              setVehicleToDelete(null)
+              setDeleteVehicleError('')
+            }
+          }}
+        >
+          <section
+            aria-labelledby="delete-vehicle-title"
+            aria-modal="true"
+            className="create-vehicle-dialog delete-vehicle-dialog"
+            role="alertdialog"
+          >
+            <div className="create-vehicle-heading">
+              <div>
+                <p className="fleet-eyebrow"><span /> FLEET MANAGEMENT</p>
+                <h2 id="delete-vehicle-title">Delete vehicle?</h2>
+                <p>
+                  This will permanently remove <strong>{vehicleToDelete.brand?.name} {vehicleToDelete.model}</strong>
+                  {' '}({vehicleToDelete.license_plate}) from your fleet.
+                </p>
+              </div>
+              <button
+                aria-label="Close confirmation"
+                className="modal-close-button"
+                disabled={isDeletingVehicle}
+                onClick={() => {
+                  setVehicleToDelete(null)
+                  setDeleteVehicleError('')
+                }}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+            {deleteVehicleError && (
+              <p className="create-form-error delete-vehicle-error" role="alert">
+                {deleteVehicleError}
+              </p>
+            )}
+            <div className="create-vehicle-actions">
+              <button
+                className="cancel-create-button"
+                disabled={isDeletingVehicle}
+                onClick={() => {
+                  setVehicleToDelete(null)
+                  setDeleteVehicleError('')
+                }}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className="confirm-delete-vehicle-button"
+                disabled={isDeletingVehicle}
+                onClick={handleDeleteVehicle}
+                type="button"
+              >
+                {isDeletingVehicle ? 'Deleting...' : 'Delete vehicle'}
+              </button>
+            </div>
           </section>
         </div>
       )}

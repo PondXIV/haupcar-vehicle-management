@@ -142,4 +142,17 @@ async function createVehicle(req, res) {
   }
 }
 
-module.exports = { createVehicle, listVehicles }
+async function deleteVehicle(req, res) {
+  if (!/^[1-9]\d*$/.test(req.params.id)) {
+    return res.status(400).json(new APIResponse(400, { error: 'Invalid vehicle id.' }))
+  }
+
+  const deleted = await vehiclesService.deleteVehicle(req.params.id)
+  if (!deleted) {
+    return res.status(404).json(new APIResponse(404, { error: 'Vehicle not found.' }))
+  }
+
+  return res.status(200).json(new APIResponse(200))
+}
+
+module.exports = { createVehicle, deleteVehicle, listVehicles }

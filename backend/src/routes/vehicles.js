@@ -6,5 +6,6 @@ const router = express.Router()
 
 router.get('/', requireAuth, vehiclesController.listVehicles)
 router.post('/', requireAuth, vehiclesController.createVehicle)
+router.delete('/:id', requireAuth, vehiclesController.deleteVehicle)
 
 module.exports = router
