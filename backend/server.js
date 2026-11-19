@@ -7,6 +7,7 @@ const { getJwtSecret } = require('./src/config/auth')
 const { initializeDatabase, prisma } = require('./src/db')
 const authRouter = require('./src/routes/auth')
 const foldersRouter = require('./src/routes/folders')
+const vehiclesRouter = require('./src/routes/vehicles')
 
 const app = express()
 
@@ -14,6 +15,7 @@ app.use(cors())
 app.use(express.json({ limit: '1mb' }))
 app.use('/api/auth', authRouter)
 app.use('/api/folders', foldersRouter)
+app.use('/api/vehicles', vehiclesRouter)
 
 app.use((req, res) => {
   res.status(404).json(new APIResponse(404, { error: 'Route not found' }))

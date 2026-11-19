@@ -63,3 +63,25 @@ Folder responses include `id`, `name`, `created_at`, and `updated_at`.
 ## Login
 
 `POST /api/auth/login` accepts `{ "username": "Somchai", "password": "1234" }` and returns the signed token in the standard `{ "Status": 200, "Data": { "token": "...", "tokenType": "Bearer", "expiresIn": 3600, "user": { "id": "...", "username": "..." } } }` response. Tokens expire after one hour. Login attempts are limited to 10 per IP per 15 minutes. Keep `JWT_SECRET` private and use a strong, unique password outside local development.
+
+## Vehicle endpoints
+
+`GET /api/vehicles` returns the vehicle list in the standard `{ "Status": 200, "Data": [] }` format. Optional query parameters:
+
+| Parameter | Behavior |
+| --- | --- |
+| `search` | Case-insensitive partial match against license plate, model, or brand name |
+| `licensePlate` | Case-insensitive partial match against license plate |
+| `brandId` | Exact match against the brand ID (positive integer) |
+| `model` | Case-insensitive partial match against model |
+| `vehicleType` | Exact match: `Electric`, `Gasoline`, or `Hybrid` |
+
+Filters can be combined. For example, `/api/vehicles?search=toy&vehicleType=Hybrid`. Unknown or invalid parameters return HTTP `400`.
+
+This endpoint requires the login token in the `Authorization` header:
+
+```http
+Authorization: Bearer <JWT>
+```
+
+Requests without a valid, unexpired token receive HTTP `401`.
