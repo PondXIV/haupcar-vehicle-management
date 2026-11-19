@@ -1,42 +1,52 @@
-const { pool } = require('../db')
+const { prisma } = require('../db')
+
+function serializeFolder(folder) {
+  if (!folder) {
+    return null
+  }
+
+  return {
+    id: folder.id.toString(),
+    name: folder.name,
+    created_at: folder.createdAt,
+    updated_at: folder.updatedAt,
+  }
+}
 
 async function findAll() {
-  const { rows } = await pool.query(
-    'SELECT id, name, created_at, updated_at FROM folders ORDER BY id'
-  )
-  return rows
+  const folders = await prisma.folder.findMany({ orderBy: { id: 'asc' } })
+  return folders.map(serializeFolder)
 }
 
 async function findById(id) {
-  const { rows } = await pool.query(
-    'SELECT id, name, created_at, updated_at FROM folders WHERE id = $1',
-    [id]
-  )
-  return rows[0] ?? null
+  const folder = await prisma.folder.findUnique({ where: { id: BigInt(id) } })
+  return serializeFolder(folder)
 }
 
 async function create(name) {
-  const { rows } = await pool.query(
-    'INSERT INTO folders (name) VALUES ($1) RETURNING id, name, created_at, updated_at',
-    [name]
-  )
-  return rows[0]
+  const folder = await prisma.folder.create({ data: { name } })
+  return serializeFolder(folder)
 }
 
 async function update(id, name) {
-  const { rows } = await pool.query(
-    `UPDATE folders
-     SET name = $1, updated_at = NOW()
-     WHERE id = $2
-     RETURNING id, name, created_at, updated_at`,
-    [name, id]
-  )
-  return rows[0] ?? null
+  try {
+    const folder = await prisma.folder.update({
+      where: { id: BigInt(id) },
+      data: { name },
+    })
+    return serializeFolder(folder)
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return null
+    }
+
+    throw error
+  }
 }
 
 async function remove(id) {
-  const { rowCount } = await pool.query('DELETE FROM folders WHERE id = $1', [id])
-  return rowCount > 0
+  const result = await prisma.folder.deleteMany({ where: { id: BigInt(id) } })
+  return result.count > 0
 }
 
 module.exports = { create, findAll, findById, remove, update }

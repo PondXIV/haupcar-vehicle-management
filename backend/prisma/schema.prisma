@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Folder {
+  id        BigInt   @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("folders")
+}
+
+model AuthUser {
+  id           BigInt   @id @default(autoincrement())
+  username     String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("auth_users")
+}
+
+model VehicleBrand {
+  id        BigInt    @id @default(autoincrement())
+  name      String    @unique @db.VarChar(100)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  vehicles  Vehicle[]
+
+  @@map("vehicle_brands")
+}
+
+model Vehicle {
+  id           BigInt       @id @default(autoincrement())
+  licensePlate String       @unique @map("license_plate") @db.VarChar(20)
+  brandId      BigInt       @map("brand_id")
+  model        String       @db.VarChar(100)
+  vehicleType  VehicleType  @map("vehicle_type")
+  notes        String?      @db.Text
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  brand        VehicleBrand @relation(fields: [brandId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([brandId])
+  @@map("vehicles")
+}
+
+enum VehicleType {
+  Electric
+  Gasoline
+  Hybrid
+
+  @@map("vehicle_type")
+}
