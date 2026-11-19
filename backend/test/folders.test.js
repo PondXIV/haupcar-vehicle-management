@@ -71,13 +71,17 @@ test('creates, reads, renames, and deletes folders', async () => {
     body: JSON.stringify({ name: ' Documents ' }),
   })
   assert.equal(createResponse.status, 201)
-  const created = await createResponse.json()
+  const createResult = await createResponse.json()
+  assert.equal(createResult.Status, 201)
+  const created = createResult.Data
   assert.equal(created.name, 'Documents')
   assert.ok(created.created_at)
   assert.ok(created.updated_at)
 
   const listResponse = await fetch(baseUrl)
-  assert.deepEqual((await listResponse.json()).map(({ name }) => name), ['Documents'])
+  const listResult = await listResponse.json()
+  assert.equal(listResult.Status, 200)
+  assert.deepEqual(listResult.Data.map(({ name }) => name), ['Documents'])
 
   const updateResponse = await fetch(`${baseUrl}/${created.id}`, {
     method: 'PUT',
@@ -85,13 +89,16 @@ test('creates, reads, renames, and deletes folders', async () => {
     body: JSON.stringify({ name: 'Archive' }),
   })
   assert.equal(updateResponse.status, 200)
-  assert.equal((await updateResponse.json()).name, 'Archive')
+  const updateResult = await updateResponse.json()
+  assert.equal(updateResult.Status, 200)
+  assert.equal(updateResult.Data.name, 'Archive')
 
   const getResponse = await fetch(`${baseUrl}/${created.id}`)
-  assert.equal((await getResponse.json()).name, 'Archive')
+  assert.equal((await getResponse.json()).Data.name, 'Archive')
 
   const deleteResponse = await fetch(`${baseUrl}/${created.id}`, { method: 'DELETE' })
-  assert.equal(deleteResponse.status, 204)
+  assert.equal(deleteResponse.status, 200)
+  assert.deepEqual(await deleteResponse.json(), { Status: 200, Data: {} })
 
   const missingResponse = await fetch(`${baseUrl}/${created.id}`)
   assert.equal(missingResponse.status, 404)
@@ -104,7 +111,12 @@ test('rejects invalid folder names and ids', async () => {
     body: JSON.stringify({ name: '   ' }),
   })
   assert.equal(createResponse.status, 400)
+  assert.deepEqual(await createResponse.json(), {
+    Status: 400,
+    Data: { error: 'Folder name cannot be empty' },
+  })
 
   const getResponse = await fetch(`${baseUrl}/not-an-id`)
   assert.equal(getResponse.status, 400)
+  assert.equal((await getResponse.json()).Status, 400)
 })

@@ -1,4 +1,9 @@
 const foldersService = require('../services/foldersService')
+const APIResponse = require('../models/apiResponse')
+
+function sendResponse(res, status, data = {}) {
+  return res.status(status).json(new APIResponse(status, data))
+}
 
 function parseId(value) {
   if (!/^[1-9]\d*$/.test(value)) {
@@ -28,64 +33,64 @@ function validateName(value) {
 
 async function listFolders(req, res) {
   const folders = await foldersService.listFolders()
-  return res.json(folders)
+  return sendResponse(res, 200, folders)
 }
 
 async function getFolder(req, res) {
   const id = parseId(req.params.id)
   if (id === null) {
-    return res.status(400).json({ error: 'Invalid folder id' })
+    return sendResponse(res, 400, { error: 'Invalid folder id' })
   }
 
   const folder = await foldersService.getFolder(id)
   if (!folder) {
-    return res.status(404).json({ error: 'Folder not found' })
+    return sendResponse(res, 404, { error: 'Folder not found' })
   }
 
-  return res.json(folder)
+  return sendResponse(res, 200, folder)
 }
 
 async function createFolder(req, res) {
   const error = validateName(req.body?.name)
   if (error) {
-    return res.status(400).json({ error })
+    return sendResponse(res, 400, { error })
   }
 
   const folder = await foldersService.createFolder(req.body.name.trim())
-  return res.status(201).json(folder)
+  return sendResponse(res, 201, folder)
 }
 
 async function updateFolder(req, res) {
   const id = parseId(req.params.id)
   if (id === null) {
-    return res.status(400).json({ error: 'Invalid folder id' })
+    return sendResponse(res, 400, { error: 'Invalid folder id' })
   }
 
   const error = validateName(req.body?.name)
   if (error) {
-    return res.status(400).json({ error })
+    return sendResponse(res, 400, { error })
   }
 
   const folder = await foldersService.updateFolder(id, req.body.name.trim())
   if (!folder) {
-    return res.status(404).json({ error: 'Folder not found' })
+    return sendResponse(res, 404, { error: 'Folder not found' })
   }
 
-  return res.json(folder)
+  return sendResponse(res, 200, folder)
 }
 
 async function deleteFolder(req, res) {
   const id = parseId(req.params.id)
   if (id === null) {
-    return res.status(400).json({ error: 'Invalid folder id' })
+    return sendResponse(res, 400, { error: 'Invalid folder id' })
   }
 
   const deleted = await foldersService.deleteFolder(id)
   if (!deleted) {
-    return res.status(404).json({ error: 'Folder not found' })
+    return sendResponse(res, 404, { error: 'Folder not found' })
   }
 
-  return res.status(204).end()
+  return sendResponse(res, 200)
 }
 
 module.exports = {
