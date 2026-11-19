@@ -6,14 +6,35 @@ const vehiclesModel = require('../src/models/vehiclesModel')
 const vehiclesRouter = require('../src/routes/vehicles')
 
 const app = express()
+app.use(express.json())
 app.use('/api/vehicles', vehiclesRouter)
 
 let server
 let baseUrl
-const originalFindAll = vehiclesModel.findAll
+const originalMethods = {
+  create: vehiclesModel.create,
+  findAll: vehiclesModel.findAll,
+}
 const originalJwtSecret = process.env.JWT_SECRET
 const testJwtSecret = 'test-secret-with-at-least-32-bytes-long'
 let receivedFilters
+let receivedVehicle
+let createError
+
+function createVehicleRecord(vehicleData) {
+  const now = '2026-01-01T00:00:00.000Z'
+  return {
+    id: '2',
+    license_plate: vehicleData.licensePlate,
+    brand_id: vehicleData.brandId,
+    brand: { id: vehicleData.brandId, name: 'Toyota' },
+    model: vehicleData.model,
+    vehicle_type: vehicleData.vehicleType,
+    notes: vehicleData.notes,
+    created_at: now,
+    updated_at: now,
+  }
+}
 
 function signToken(options = {}) {
   return jwt.sign(
@@ -30,6 +51,11 @@ function signToken(options = {}) {
 
 before(async () => {
   process.env.JWT_SECRET = testJwtSecret
+  vehiclesModel.create = async (vehicleData) => {
+    receivedVehicle = vehicleData
+    if (createError) throw createError
+    return createVehicleRecord(vehicleData)
+  }
   vehiclesModel.findAll = async (filters) => {
     receivedFilters = filters
     return [{
@@ -52,7 +78,7 @@ before(async () => {
 })
 
 after(async () => {
-  vehiclesModel.findAll = originalFindAll
+  Object.assign(vehiclesModel, originalMethods)
   if (originalJwtSecret === undefined) {
     delete process.env.JWT_SECRET
   } else {
@@ -122,4 +148,77 @@ test('rejects invalid and unsupported query parameters', async () => {
     assert.equal(response.status, 400, query)
     assert.equal((await response.json()).Status, 400)
   }
+})
+
+test('creates an authenticated vehicle and returns the created record', async () => {
+  const response = await fetch(baseUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${signToken()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      licensePlate: ' NEW-123 ',
+      brandId: 1,
+      model: ' Corolla ',
+      vehicleType: 'Hybrid',
+      notes: 'Company vehicle',
+    }),
+  })
+
+  assert.equal(response.status, 201)
+  const result = await response.json()
+  assert.equal(result.Status, 201)
+  assert.deepEqual(receivedVehicle, {
+    licensePlate: 'NEW-123',
+    brandId: '1',
+    model: 'Corolla',
+    vehicleType: 'Hybrid',
+    notes: 'Company vehicle',
+  })
+  assert.deepEqual(result.Data, createVehicleRecord(receivedVehicle))
+})
+
+test('validates vehicle creation fields', async () => {
+  const headers = {
+    Authorization: `Bearer ${signToken()}`,
+    'Content-Type': 'application/json',
+  }
+
+  for (const body of [
+    { licensePlate: '', brandId: 1, model: 'Corolla', vehicleType: 'Gasoline' },
+    { licensePlate: 'CAR-1', brandId: 0, model: 'Corolla', vehicleType: 'Gasoline' },
+    { licensePlate: 'CAR-1', brandId: 1, model: 'Corolla', vehicleType: 'Diesel' },
+    { licensePlate: 'CAR-1', brandId: 1, model: 'Corolla', vehicleType: 'Gasoline', extra: true },
+  ]) {
+    const response = await fetch(baseUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    })
+    assert.equal(response.status, 400)
+    assert.equal((await response.json()).Status, 400)
+  }
+})
+
+test('returns conflict for duplicate license plates and invalid brand references', async () => {
+  const headers = {
+    Authorization: `Bearer ${signToken()}`,
+    'Content-Type': 'application/json',
+  }
+  const body = JSON.stringify({
+    licensePlate: 'DUP-1',
+    brandId: 1,
+    model: 'Corolla',
+    vehicleType: 'Gasoline',
+  })
+
+  createError = { code: 'P2002' }
+  const duplicateResponse = await fetch(baseUrl, { method: 'POST', headers, body })
+  assert.equal(duplicateResponse.status, 409)
+
+  createError = { code: 'P2003' }
+  const invalidBrandResponse = await fetch(baseUrl, { method: 'POST', headers, body })
+  assert.equal(invalidBrandResponse.status, 400)
+  createError = null
 })

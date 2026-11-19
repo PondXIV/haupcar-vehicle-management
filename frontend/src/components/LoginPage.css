@@ -26,39 +26,6 @@
   min-height: calc(100vh - 96px);
 }
 
-.brand {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  gap: 10px;
-  color: #173a36;
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-decoration: none;
-}
-
-.brand-light {
-  color: #66817b;
-  font-weight: 500;
-}
-
-.brand-mark {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border: 1px solid #dce8e4;
-  border-radius: 12px;
-  background: #f1f7f4;
-  color: var(--teal);
-}
-
-.brand-mark svg {
-  width: 25px;
-  height: 25px;
-}
-
 .heading-block,
 .success-state {
   margin-top: clamp(72px, 13vh, 132px);

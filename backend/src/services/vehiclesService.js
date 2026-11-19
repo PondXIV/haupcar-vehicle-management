@@ -4,4 +4,8 @@ async function listVehicles(filters) {
   return vehiclesModel.findAll(filters)
 }
 
-module.exports = { listVehicles }
+async function createVehicle(vehicleData) {
+  return vehiclesModel.create(vehicleData)
+}
+
+module.exports = { createVehicle, listVehicles }
