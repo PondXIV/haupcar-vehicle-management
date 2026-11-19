@@ -14,12 +14,15 @@ let baseUrl
 const originalMethods = {
   create: vehiclesModel.create,
   findAll: vehiclesModel.findAll,
+  remove: vehiclesModel.remove,
 }
 const originalJwtSecret = process.env.JWT_SECRET
 const testJwtSecret = 'test-secret-with-at-least-32-bytes-long'
 let receivedFilters
 let receivedVehicle
 let createError
+let deleteResult
+let receivedDeletedId
 
 function createVehicleRecord(vehicleData) {
   const now = '2026-01-01T00:00:00.000Z'
@@ -69,6 +72,10 @@ before(async () => {
       created_at: '2026-01-01T00:00:00.000Z',
       updated_at: '2026-01-01T00:00:00.000Z',
     }]
+  }
+  vehiclesModel.remove = async (id) => {
+    receivedDeletedId = id
+    return deleteResult
   }
 
   await new Promise((resolve) => {
@@ -221,4 +228,42 @@ test('returns conflict for duplicate license plates and invalid brand references
   const invalidBrandResponse = await fetch(baseUrl, { method: 'POST', headers, body })
   assert.equal(invalidBrandResponse.status, 400)
   createError = null
+})
+
+test('deletes an authenticated vehicle by id', async () => {
+  deleteResult = true
+  const response = await fetch(`${baseUrl}/2`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${signToken()}` },
+  })
+
+  assert.equal(response.status, 200)
+  assert.equal(receivedDeletedId, '2')
+  assert.deepEqual(await response.json(), { Status: 200, Data: {} })
+})
+
+test('validates vehicle id and returns not found for missing vehicles', async () => {
+  const headers = { Authorization: `Bearer ${signToken()}` }
+
+  const invalidResponse = await fetch(`${baseUrl}/not-an-id`, {
+    method: 'DELETE',
+    headers,
+  })
+  assert.equal(invalidResponse.status, 400)
+
+  deleteResult = false
+  const missingResponse = await fetch(`${baseUrl}/999`, {
+    method: 'DELETE',
+    headers,
+  })
+  assert.equal(missingResponse.status, 404)
+  assert.deepEqual(await missingResponse.json(), {
+    Status: 404,
+    Data: { error: 'Vehicle not found.' },
+  })
+})
+
+test('requires authentication to delete vehicles', async () => {
+  const response = await fetch(`${baseUrl}/2`, { method: 'DELETE' })
+  assert.equal(response.status, 401)
 })

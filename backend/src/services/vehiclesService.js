@@ -8,4 +8,8 @@ async function createVehicle(vehicleData) {
   return vehiclesModel.create(vehicleData)
 }
 
-module.exports = { createVehicle, listVehicles }
+async function deleteVehicle(id) {
+  return vehiclesModel.remove(id)
+}
+
+module.exports = { createVehicle, deleteVehicle, listVehicles }

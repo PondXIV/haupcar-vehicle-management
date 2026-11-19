@@ -640,6 +640,10 @@
   white-space: nowrap;
 }
 
+.vehicle-table {
+  min-width: 760px;
+}
+
 .vehicle-table thead {
   background: #fafcfb;
 }
@@ -771,6 +775,64 @@
 .updated-value {
   color: #8d9994;
   font-size: 8px;
+}
+
+.vehicle-actions-cell {
+  width: 1%;
+  text-align: right;
+}
+
+.vehicle-delete-button,
+.confirm-delete-vehicle-button {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid #f0dfdc;
+  border-radius: 5px;
+  background: #fff;
+  color: #a25b52;
+  cursor: pointer;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.vehicle-delete-button:hover,
+.confirm-delete-vehicle-button:hover:not(:disabled) {
+  border-color: #e7bdb5;
+  background: #fff8f6;
+  color: #893b33;
+}
+
+.confirm-delete-vehicle-button {
+  min-height: 34px;
+  padding-inline: 12px;
+  border-color: #a94c42;
+  background: #a94c42;
+  color: #fff;
+  font-size: 10px;
+}
+
+.confirm-delete-vehicle-button:hover:not(:disabled) {
+  border-color: #893b33;
+  background: #893b33;
+  color: #fff;
+}
+
+.confirm-delete-vehicle-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.delete-vehicle-dialog {
+  width: min(100%, 460px);
+}
+
+.delete-vehicle-dialog .create-vehicle-actions {
+  padding-top: 18px;
+}
+
+.delete-vehicle-error {
+  margin-top: 16px;
 }
 
 .skeleton {
@@ -1117,7 +1179,9 @@
 .submit-create-button:focus-visible,
 .cancel-create-button:focus-visible,
 .modal-close-button:focus-visible,
-.vehicle-success-toast > button:focus-visible {
+.vehicle-success-toast > button:focus-visible,
+.vehicle-delete-button:focus-visible,
+.confirm-delete-vehicle-button:focus-visible {
   outline: 3px solid rgba(38, 140, 123, 0.35);
   outline-offset: 2px;
 }

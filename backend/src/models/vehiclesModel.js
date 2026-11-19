@@ -84,4 +84,9 @@ async function create(vehicleData) {
   return serializeVehicle(vehicle)
 }
 
-module.exports = { create, findAll }
+async function remove(id) {
+  const result = await prisma.vehicle.deleteMany({ where: { id: BigInt(id) } })
+  return result.count > 0
+}
+
+module.exports = { create, findAll, remove }
